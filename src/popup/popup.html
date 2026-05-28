@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HydroMonk</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+<div class="app">
+
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <header class="header">
+    <div class="logo">
+      <span class="logo-drop">💧</span>
+      <span class="logo-text">HydroMonk</span>
+    </div>
+    <div class="header-right">
+      <div class="streak-badge hidden" id="streak-badge">
+        <span>🔥</span>
+        <span id="streak-num">0</span>
+      </div>
+      <button class="icon-btn" id="btn-settings" title="Settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Main View ──────────────────────────────────────── -->
+  <main id="main-view">
+
+    <!-- Water circle -->
+    <div class="circle-section">
+      <div class="water-circle-wrap">
+        <div class="circle-ring ring-2"></div>
+        <div class="circle-ring ring-1"></div>
+        <div class="water-circle" id="water-circle">
+          <div class="water-fill" id="water-fill">
+            <div class="wave-a"></div>
+            <div class="wave-b"></div>
+          </div>
+          <div class="circle-content">
+            <div class="circle-count">
+              <span id="circle-count">0</span><span class="circle-sep">/</span><span id="circle-goal">8</span>
+            </div>
+            <div class="circle-label">glasses</div>
+            <div class="circle-pct" id="circle-pct">0%</div>
+          </div>
+        </div>
+      </div>
+      <div class="goal-badge hidden" id="goal-badge">🎉 Daily goal reached!</div>
+    </div>
+
+    <!-- Quick add -->
+    <div class="quick-add-section">
+      <div class="section-label">Quick add</div>
+      <div class="quick-add-row" id="quick-add-row">
+        <button class="add-btn" data-ml="200">200ml</button>
+        <button class="add-btn add-btn-active" data-ml="250">250ml</button>
+        <button class="add-btn" data-ml="350">350ml</button>
+        <button class="add-btn" data-ml="500">500ml</button>
+        <button class="add-btn add-btn-custom" id="btn-custom" title="Custom amount">＋</button>
+      </div>
+      <div class="custom-input-row hidden" id="custom-input-row">
+        <input type="number" id="custom-ml" class="custom-input" placeholder="Amount in ml" min="1" max="2000" />
+        <button class="add-confirm-btn" id="btn-add-custom">Add</button>
+        <button class="add-cancel-btn" id="btn-cancel-custom">✕</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat">
+        <div class="stat-val" id="stat-intake">0ml</div>
+        <div class="stat-key">today</div>
+      </div>
+      <div class="stat-div"></div>
+      <div class="stat">
+        <div class="stat-val" id="stat-next">—</div>
+        <div class="stat-key">next reminder</div>
+      </div>
+      <div class="stat-div"></div>
+      <div class="stat">
+        <div class="stat-val" id="stat-goal-ml">2,000ml</div>
+        <div class="stat-key">daily goal</div>
+      </div>
+    </div>
+
+    <!-- Hydration fact -->
+    <div class="fact-card" id="fact-card">
+      <div class="fact-icon">💡</div>
+      <div class="fact-text" id="fact-text"></div>
+    </div>
+
+    <!-- Benefits button -->
+    <button class="benefits-btn" id="btn-benefits">✦ View benefits of drinking water</button>
+
+    <!-- Today's log -->
+    <div class="log-section">
+      <div class="log-header">
+        <span class="log-title">Today's log</span>
+        <button class="log-clear-btn" id="btn-clear-log">Clear all</button>
+      </div>
+      <div class="log-list" id="log-list">
+        <div class="log-empty">No water logged yet today</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── Benefits View ──────────────────────────────────── -->
+  <div id="benefits-view" class="slide-view hidden">
+    <div class="view-header">
+      <button class="back-btn" id="btn-back-benefits">←</button>
+      <span class="view-title">Benefits of Water</span>
+    </div>
+    <div class="benefits-list">
+      <div class="benefit-card">
+        <div class="benefit-icon">🧠</div>
+        <div class="benefit-info">
+          <div class="benefit-title">Sharper Brain & Focus</div>
+          <div class="benefit-desc">73% of your brain is water. Just 1–2% dehydration impairs focus, memory, and decision-making — the equivalent of a 0.08 BAC.</div>
+        </div>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">⚡</div>
+        <div class="benefit-info">
+          <div class="benefit-title">More Energy & Productivity</div>
+          <div class="benefit-desc">1% dehydration drops productivity by 12%. 2–3% cuts energy levels by 20%. Only 23% of desk workers drink enough water daily.</div>
+        </div>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">💪</div>
+        <div class="benefit-info">
+          <div class="benefit-title">Peak Performance</div>
+          <div class="benefit-desc">Proper hydration can boost physical and mental performance by up to 25%. 3–4% dehydration cuts work performance by up to 50%.</div>
+        </div>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">🌅</div>
+        <div class="benefit-info">
+          <div class="benefit-title">Morning Metabolism Boost</div>
+          <div class="benefit-desc">A glass of water first thing in the morning jumpstarts your metabolism by up to 24% and flushes overnight toxins.</div>
+        </div>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">🥗</div>
+        <div class="benefit-info">
+          <div class="benefit-title">Weight Management</div>
+          <div class="benefit-desc">Drinking 20–30 min before meals helps you distinguish hunger from thirst, reducing unnecessary calorie intake.</div>
+        </div>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">✨</div>
+        <div class="benefit-info">
+          <div class="benefit-title">Glowing Skin</div>
+          <div class="benefit-desc">Water improves skin elasticity and reduces dryness. Consistent hydration shows visible skin improvement within days.</div>
+        </div>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">🦴</div>
+        <div class="benefit-info">
+          <div class="benefit-title">Joint & Muscle Health</div>
+          <div class="benefit-desc">Cartilage in joints is 80% water. Hydration keeps joints lubricated, reduces pain, and prevents muscle cramps.</div>
+        </div>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">🫀</div>
+        <div class="benefit-info">
+          <div class="benefit-title">Heart & Kidney Health</div>
+          <div class="benefit-desc">Staying hydrated lowers the risk of kidney stones, UTIs, and supports cardiovascular health and blood pressure regulation.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Settings View ──────────────────────────────────── -->
+  <div id="settings-view" class="slide-view hidden">
+    <div class="view-header">
+      <button class="back-btn" id="btn-back-settings">←</button>
+      <span class="view-title">Settings</span>
+    </div>
+    <div class="settings-body">
+
+      <div class="set-section">
+        <div class="set-section-title">Reminder interval</div>
+        <div class="seg-group" id="seg-interval">
+          <button class="seg-btn" data-val="20">20 min</button>
+          <button class="seg-btn" data-val="30">30 min</button>
+          <button class="seg-btn" data-val="45">45 min</button>
+          <button class="seg-btn" data-val="60">60 min</button>
+          <button class="seg-btn" data-val="90">90 min</button>
+        </div>
+      </div>
+
+      <div class="set-section">
+        <div class="set-section-title">Daily goal (glasses)</div>
+        <div class="number-input-row">
+          <button class="num-btn" id="btn-goal-down">−</button>
+          <span class="num-val" id="goal-num">8</span>
+          <button class="num-btn" id="btn-goal-up">+</button>
+        </div>
+      </div>
+
+      <div class="set-section">
+        <div class="set-section-title">Glass size</div>
+        <div class="seg-group" id="seg-glass">
+          <button class="seg-btn" data-val="200">200 ml</button>
+          <button class="seg-btn" data-val="250">250 ml</button>
+          <button class="seg-btn" data-val="300">300 ml</button>
+          <button class="seg-btn" data-val="350">350 ml</button>
+        </div>
+      </div>
+
+      <div class="set-section">
+        <div class="set-section-title">Active hours (no reminders outside this window)</div>
+        <div class="time-row">
+          <div class="time-field">
+            <label>From</label>
+            <input type="time" id="time-start" class="time-input" value="08:00" />
+          </div>
+          <div class="time-field">
+            <label>To</label>
+            <input type="time" id="time-end" class="time-input" value="20:00" />
+          </div>
+        </div>
+      </div>
+
+      <div class="set-section">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Weekdays only</span>
+            <span class="toggle-desc">Pause reminders on weekends</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggle-weekdays" />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="set-section">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Sound on notifications</span>
+            <span class="toggle-desc">Play sound with each reminder</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggle-sound" checked />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="set-section">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Reminders enabled</span>
+            <span class="toggle-desc">Toggle off to pause all reminders</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggle-enabled" checked />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="set-section">
+        <div class="set-section-title">Calculate goal by weight</div>
+        <div class="calc-row">
+          <input type="number" id="weight-input" class="calc-input" placeholder="Your weight in kg" min="30" max="200" />
+          <button class="calc-btn" id="btn-calc-goal">Calculate</button>
+        </div>
+        <div class="calc-result hidden" id="calc-result"></div>
+      </div>
+
+      <button class="save-btn" id="btn-save-settings">Save Settings</button>
+
+    </div>
+  </div>
+
+</div>
+<script type="module" src="popup.js"></script>
+</body>
+</html>
