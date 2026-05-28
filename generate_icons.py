@@ -1,73 +1,121 @@
-from PIL import Image, ImageDraw
-import math, os
+"""
+HydroMonk icon generator.
+Classic water-drop: circular base + two quadratic bezier curves to a pointed tip.
+"""
+from PIL import Image, ImageDraw, ImageFilter
+import numpy as np
+import math
 
-os.makedirs('icons', exist_ok=True)
+
+def bezier2(p0, p1, p2, steps):
+    """Quadratic bezier from p0 to p2 with control p1."""
+    pts = []
+    for i in range(steps + 1):
+        t = i / steps
+        x = (1-t)**2 * p0[0] + 2*(1-t)*t * p1[0] + t**2 * p2[0]
+        y = (1-t)**2 * p0[1] + 2*(1-t)*t * p1[1] + t**2 * p2[1]
+        pts.append((x, y))
+    return pts
+
+
+def water_drop_points(cx, tip_y, circle_cy, r, steps=48):
+    """
+    Classic water-drop outline:
+      - tip at (cx, tip_y)  [top, pointed]
+      - circular base centred at (cx, circle_cy) with radius r  [bottom, round]
+    """
+    pts = []
+
+    # Right side: tip → right contact point of circle
+    right_x, right_y = cx + r, circle_cy
+    ctrl_r = (cx + r * 0.72, tip_y + (circle_cy - tip_y) * 0.28)
+    pts += bezier2((cx, tip_y), ctrl_r, (right_x, right_y), steps)
+
+    # Bottom arc: right → bottom → left  (angles 0 → π, i.e. clockwise through bottom)
+    for i in range(steps + 1):
+        angle = math.pi * i / steps          # 0 … π
+        pts.append((cx + r * math.cos(angle),
+                    circle_cy + r * math.sin(angle)))
+
+    # Left side: left contact point → tip
+    left_x, left_y = cx - r, circle_cy
+    ctrl_l = (cx - r * 0.72, tip_y + (circle_cy - tip_y) * 0.28)
+    pts += bezier2((left_x, left_y), ctrl_l, (cx, tip_y), steps)
+
+    return pts
+
+
+def diag_gradient(size, tl_color, br_color):
+    """Diagonal gradient top-left → bottom-right."""
+    arr = np.zeros((size, size, 3), dtype=np.uint8)
+    xs = np.linspace(0, 1, size)
+    ys = np.linspace(0, 1, size)
+    xg, yg = np.meshgrid(xs, ys)
+    t = (xg + yg) / 2                        # 0 = top-left, 1 = bottom-right
+    for c in range(3):
+        arr[:, :, c] = (tl_color[c] + (br_color[c] - tl_color[c]) * t).astype(np.uint8)
+    return Image.fromarray(arr, 'RGB')
+
 
 def make_icon(size):
-    img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    p = size / 128
+    SCALE = 8
+    S = size * SCALE
 
-    # Background circle with gradient feel
-    bg = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    bgd = ImageDraw.Draw(bg)
-    for i in range(size // 2):
-        t = i / (size / 2)
-        r = int(5 + 20 * t)
-        g = int(14 + 151 * t)
-        b = int(28 + 195 * t)
-        bgd.ellipse([i, i, size - i, size - i], fill=(r, g, b, 255))
-    img = Image.alpha_composite(img, bg)
-    d = ImageDraw.Draw(img)
+    # ── Geometry ─────────────────────────────────────────────────────
+    cx        = S / 2
+    r         = S * 0.34          # circle radius  (68 % of half-width)
+    circle_cy = S * 0.63          # circle centre  (63 % down)
+    tip_y     = S * 0.06          # tip             (6 % from top)
 
-    # Water drop shape
-    cx = size / 2
-    drop_top = size * 0.12
-    drop_bottom = size * 0.88
-    drop_w = size * 0.42
+    pts = water_drop_points(cx, tip_y, circle_cy, r)
 
-    # Draw drop body: circle at bottom + triangle top
-    circle_cy = drop_bottom - drop_w * 0.85
-    circle_r = drop_w * 0.82
+    # ── Mask (anti-aliased) ──────────────────────────────────────────
+    mask = Image.new('L', (S, S), 0)
+    ImageDraw.Draw(mask).polygon(pts, fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(radius=SCALE * 0.5))
+    mask_arr = np.array(mask)
 
-    d.ellipse([
-        cx - circle_r, circle_cy - circle_r,
-        cx + circle_r, circle_cy + circle_r
-    ], fill=(255, 255, 255, 230))
+    # ── Gradient fill: sky-300 (top-left) → sky-800 (bottom-right) ──
+    grad = diag_gradient(S,
+                         tl_color=(125, 211, 252),   # #7DD3FC
+                         br_color=(  3,  90, 145))   # ~sky-800
+    canvas = grad.convert('RGBA')
+    # Apply mask to alpha channel
+    arr = np.array(canvas)
+    arr[:, :, 3] = mask_arr
+    canvas = Image.fromarray(arr, 'RGBA')
 
-    # Triangle top (teardrop point)
-    poly = [
-        (cx, drop_top),
-        (cx - drop_w * 0.75, circle_cy),
-        (cx + drop_w * 0.75, circle_cy),
-    ]
-    d.polygon(poly, fill=(255, 255, 255, 230))
+    # ── Large soft highlight (upper-left inner zone) ─────────────────
+    hl = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    hd = ImageDraw.Draw(hl)
+    hcx = cx - r * 0.20
+    hcy = tip_y + (circle_cy - tip_y) * 0.22
+    hrx = r * 0.42
+    hry = (circle_cy - tip_y) * 0.22
+    hd.ellipse([hcx - hrx, hcy - hry, hcx + hrx, hcy + hry],
+               fill=(255, 255, 255, 115))
+    hl = hl.filter(ImageFilter.GaussianBlur(radius=SCALE * 1.1))
+    hl_arr = np.array(hl)
+    hl_arr[:, :, 3] = np.minimum(hl_arr[:, :, 3], mask_arr)
+    canvas = Image.alpha_composite(canvas, Image.fromarray(hl_arr, 'RGBA'))
 
-    # Inner highlight/shine
-    shine_r = circle_r * 0.28
-    shine_cx = cx - circle_r * 0.28
-    shine_cy = circle_cy - circle_r * 0.28
-    d.ellipse([
-        shine_cx - shine_r, shine_cy - shine_r,
-        shine_cx + shine_r, shine_cy + shine_r
-    ], fill=(255, 255, 255, 120))
+    # ── Small specular dot near tip ───────────────────────────────────
+    sp = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(sp)
+    scx, scy = cx - r * 0.24, tip_y + (circle_cy - tip_y) * 0.12
+    sr = S * 0.038
+    sd.ellipse([scx - sr, scy - sr, scx + sr, scy + sr],
+               fill=(255, 255, 255, 200))
+    sp = sp.filter(ImageFilter.GaussianBlur(radius=SCALE * 0.55))
+    sp_arr = np.array(sp)
+    sp_arr[:, :, 3] = np.minimum(sp_arr[:, :, 3], mask_arr)
+    canvas = Image.alpha_composite(canvas, Image.fromarray(sp_arr, 'RGBA'))
 
-    # Small waves inside drop for detail (only on 48px+)
-    if size >= 48:
-        wave_y = circle_cy + circle_r * 0.18
-        wave_color = (14, 165, 233, 160)
-        for wi in range(2):
-            wy = wave_y + wi * circle_r * 0.22
-            wr = circle_r * (0.55 - wi * 0.1)
-            d.ellipse([cx - wr, wy - circle_r * 0.06,
-                        cx + wr, wy + circle_r * 0.06],
-                       fill=wave_color)
+    return canvas.resize((size, size), Image.LANCZOS)
 
-    return img
 
 for sz in [16, 32, 48, 128]:
-    icon = make_icon(sz)
-    icon.save(f'icons/icon{sz}.png')
+    make_icon(sz).save(f'icons/icon{sz}.png')
     print(f'  icon{sz}.png')
 
-print('Icons generated.')
+print('Done.')
