@@ -1,0 +1,47 @@
+name: Build & Package
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension
+        run: npm run build
+
+      - name: Get version
+        id: version
+        run: echo "version=$(node -p "require('./manifest.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Package zip
+        run: cd dist && zip -r ../hydromonk-${{ steps.version.outputs.version }}.zip .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hydromonk-${{ steps.version.outputs.version }}
+          path: hydromonk-${{ steps.version.outputs.version }}.zip
+          retention-days: 30
+
+      - name: Release on version tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: hydromonk-${{ steps.version.outputs.version }}.zip
