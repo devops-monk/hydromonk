@@ -74,6 +74,35 @@ export async function getStats(): Promise<Stats> {
   return { ...DEFAULT_STATS, ...(r['hm_stats'] as Partial<Stats> ?? {}) };
 }
 
+export interface WeeklyEntry {
+  date: string;
+  dayLabel: string;
+  totalMl: number;
+  goalMet: boolean;
+  isToday: boolean;
+}
+
+export async function getWeeklyHistory(goalGlasses: number, glassSizeMl: number): Promise<WeeklyEntry[]> {
+  const goalMl = goalGlasses * glassSizeMl;
+  const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const entries: WeeklyEntry[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const log = await getDailyLog(dateStr);
+    const totalMl = log.entries.reduce((s, e) => s + e.ml, 0);
+    entries.push({
+      date: dateStr,
+      dayLabel: DAY_NAMES[d.getDay()]!,
+      totalMl,
+      goalMet: totalMl >= goalMl,
+      isToday: i === 0,
+    });
+  }
+  return entries;
+}
+
 export async function checkAndUpdateStreak(settings: Settings): Promise<Stats> {
   const log = await getDailyLog();
   const totalMl = log.entries.reduce((s, e) => s + e.ml, 0);

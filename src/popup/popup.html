@@ -20,6 +20,11 @@
         <span>🔥</span>
         <span id="streak-num">0</span>
       </div>
+      <button class="icon-btn" id="btn-history" title="Drinking history">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+      </button>
       <button class="icon-btn" id="btn-settings" title="Settings">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"/>
@@ -281,6 +286,45 @@
 
     </div>
   </div>
+
+  <!-- ── History View ───────────────────────────────────────── -->
+  <div id="history-view" class="slide-view hidden">
+    <div class="view-header">
+      <button class="back-btn" id="btn-back-history">←</button>
+      <span class="view-title">Drinking History</span>
+    </div>
+    <div class="history-body">
+
+      <!-- Weekly summary cards -->
+      <div class="hist-summary-row">
+        <div class="hist-stat">
+          <div class="hist-stat-val" id="hs-avg">—</div>
+          <div class="hist-stat-key">avg / day</div>
+        </div>
+        <div class="hist-stat">
+          <div class="hist-stat-val" id="hs-days">—</div>
+          <div class="hist-stat-key">days hit goal</div>
+        </div>
+        <div class="hist-stat">
+          <div class="hist-stat-val" id="hs-streak">—</div>
+          <div class="hist-stat-key">best streak</div>
+        </div>
+      </div>
+
+      <!-- 7-day bar chart -->
+      <div class="hist-chart-wrap">
+        <div class="hist-chart-title">Last 7 days</div>
+        <svg id="hist-chart" class="hist-chart" viewBox="0 0 294 90" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+
+      <!-- Per-day rows -->
+      <div class="hist-days" id="hist-days"></div>
+
+    </div>
+  </div>
+
+  <!-- Confetti layer (appended dynamically by popup.ts) -->
+  <div id="confetti-layer" class="confetti-layer hidden"></div>
 
 </div>
 <script type="module" src="popup.js"></script>
