@@ -1,6 +1,6 @@
 import {
   getSettings, saveSettings, getDailyLog, addEntry, clearTodayLog,
-  getStats, checkAndUpdateStreak, type Settings,
+  getStats, checkAndUpdateStreak, getWeeklyHistory, type Settings,
 } from '../utils/storage';
 
 // ── Rotating facts ──────────────────────────────────────────────────────────
@@ -143,6 +143,15 @@ async function refresh() {
     nextAlarmMs = res?.scheduledTime ?? null;
     startCountdown();
   });
+
+  // Celebrate goal completion (once per session, tracked in sessionStorage)
+  if (logged >= settings.dailyGoalGlasses && totalMl > 0) {
+    const celebKey = `hm_celebrated_${new Date().toISOString().slice(0, 10)}`;
+    if (!sessionStorage.getItem(celebKey)) {
+      sessionStorage.setItem(celebKey, '1');
+      setTimeout(triggerConfetti, 200);
+    }
+  }
 }
 
 // ── Log water ────────────────────────────────────────────────────────────────
@@ -207,6 +216,16 @@ document.getElementById('btn-back-settings')!.addEventListener('click', () => {
 });
 document.getElementById('btn-benefits')!.addEventListener('click', () => showView('benefits-view'));
 document.getElementById('btn-back-benefits')!.addEventListener('click', () => showView(''));
+
+document.getElementById('btn-history')!.addEventListener('click', async () => {
+  await renderHistory();
+  showView('history-view');
+  document.getElementById('btn-history')!.classList.add('active');
+});
+document.getElementById('btn-back-history')!.addEventListener('click', () => {
+  showView('');
+  document.getElementById('btn-history')!.classList.remove('active');
+});
 
 // ── Settings UI ───────────────────────────────────────────────────────────────
 function loadSettingsUI() {
@@ -288,12 +307,102 @@ document.getElementById('btn-save-settings')!.addEventListener('click', async ()
     remindersEnabled: (document.getElementById('toggle-enabled') as HTMLInputElement).checked,
   });
 
-  chrome.runtime.sendMessage({ action: 'reschedule', intervalMinutes });
+  // Only force-restart the timer if the interval actually changed
+  const intervalChanged = intervalMinutes !== settings.intervalMinutes;
+  chrome.runtime.sendMessage({ action: 'reschedule', intervalMinutes, force: intervalChanged });
   showToast('Settings saved ✓');
   showView('');
   document.getElementById('btn-settings')!.classList.remove('active');
   await refresh();
 });
+
+// ── History chart ─────────────────────────────────────────────────────────────
+async function renderHistory() {
+  const week = await getWeeklyHistory(settings.dailyGoalGlasses, settings.glassSizeMl);
+  const stats = await getStats();
+  const goalMl = settings.dailyGoalGlasses * settings.glassSizeMl;
+
+  // Summary stats
+  const daysWithData = week.filter(d => d.totalMl > 0);
+  const avgMl = daysWithData.length
+    ? Math.round(daysWithData.reduce((s, d) => s + d.totalMl, 0) / daysWithData.length)
+    : 0;
+  const daysHit = week.filter(d => d.goalMet).length;
+  document.getElementById('hs-avg')!.textContent = avgMl > 0 ? fmt(avgMl) : '—';
+  document.getElementById('hs-days')!.textContent = `${daysHit}/7`;
+  document.getElementById('hs-streak')!.textContent = `${stats.longestStreak}d`;
+
+  // SVG bar chart
+  const svg = document.getElementById('hist-chart')!;
+  const svgW = 294, chartH = 58, topPad = 5, labelH = 22;
+  const slotW = svgW / 7;
+  const barW = 22;
+
+  let svgContent = '';
+
+  // Goal line (dashed) at top of bar area
+  svgContent += `<line x1="0" y1="${topPad}" x2="${svgW}" y2="${topPad}" stroke="rgba(56,189,248,0.2)" stroke-dasharray="4 3" stroke-width="1"/>`;
+
+  week.forEach((day, i) => {
+    const barH = goalMl > 0 ? Math.max(2, Math.min(chartH, (day.totalMl / goalMl) * chartH)) : 0;
+    const x = i * slotW + (slotW - barW) / 2;
+    const y = topPad + chartH - barH;
+    const fill = day.isToday
+      ? 'url(#todayGrad)'
+      : day.goalMet ? '#0ea5e9' : 'rgba(56,189,248,0.2)';
+    const labelY = topPad + chartH + labelH - 4;
+
+    svgContent += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW}" height="${barH.toFixed(1)}" rx="4" fill="${fill}"/>`;
+    svgContent += `<text x="${(x + barW / 2).toFixed(1)}" y="${labelY}" text-anchor="middle" fill="${day.isToday ? '#38bdf8' : 'rgba(224,242,254,0.4)'}" font-size="10" font-family="-apple-system,sans-serif" font-weight="${day.isToday ? '700' : '400'}">${day.dayLabel}</text>`;
+    if (day.totalMl > 0) {
+      const mlLabel = day.totalMl >= 1000 ? `${(day.totalMl / 1000).toFixed(1)}L` : `${day.totalMl}`;
+      svgContent += `<text x="${(x + barW / 2).toFixed(1)}" y="${(y - 3).toFixed(1)}" text-anchor="middle" fill="rgba(224,242,254,0.5)" font-size="8" font-family="-apple-system,sans-serif">${mlLabel}</text>`;
+    }
+  });
+
+  // Gradient definition for today's bar
+  svgContent = `<defs><linearGradient id="todayGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#0284c7"/></linearGradient></defs>` + svgContent;
+  svg.innerHTML = svgContent;
+
+  // Per-day rows
+  const container = document.getElementById('hist-days')!;
+  container.innerHTML = '';
+  [...week].reverse().forEach(day => {
+    const pct = goalMl > 0 ? Math.min(100, (day.totalMl / goalMl) * 100) : 0;
+    const d = new Date(day.date + 'T00:00:00');
+    const label = day.isToday ? 'Today' : `${day.dayLabel} ${d.getDate()}`;
+    const row = document.createElement('div');
+    row.className = `hist-day-row${day.goalMet ? ' goal-met' : ''}${day.isToday ? ' today' : ''}`;
+    row.innerHTML = `
+      <span class="hist-day-label">${label}</span>
+      <div class="hist-day-bar-wrap">
+        <div class="hist-day-bar ${day.goalMet ? 'goal-met' : 'partial'}" style="width:${pct.toFixed(1)}%"></div>
+      </div>
+      <span class="hist-day-ml">${day.totalMl > 0 ? fmt(day.totalMl) : '—'}</span>
+      <span class="hist-day-badge">${day.goalMet ? '✅' : day.totalMl > 0 ? '🔵' : '⬜'}</span>`;
+    container.appendChild(row);
+  });
+}
+
+// ── Goal celebration confetti ─────────────────────────────────────────────────
+function triggerConfetti() {
+  const layer = document.getElementById('confetti-layer')!;
+  layer.classList.remove('hidden');
+  layer.innerHTML = '';
+  const colors = ['#38bdf8', '#0ea5e9', '#06b6d4', '#67e8f9', '#7dd3fc', '#bae6fd', '#22d3ee', '#ffffff'];
+  for (let i = 0; i < 36; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    const color = colors[Math.floor(Math.random() * colors.length)]!;
+    const left   = Math.random() * 100;
+    const delay  = Math.random() * 0.7;
+    const dur    = 1.4 + Math.random() * 0.8;
+    const rotate = Math.random() > 0.5 ? 'scaleX(-1)' : '';
+    piece.style.cssText = `left:${left}%;background:${color};transform:${rotate};animation-duration:${dur}s;animation-delay:${delay}s`;
+    layer.appendChild(piece);
+  }
+  setTimeout(() => { layer.classList.add('hidden'); layer.innerHTML = ''; }, 2800);
+}
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 refresh();

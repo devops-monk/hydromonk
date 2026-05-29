@@ -447,5 +447,66 @@ body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; 
 @keyframes toast-in  { from { opacity:0; transform: translateX(-50%) translateY(8px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
 @keyframes toast-out { from { opacity:1; } to { opacity:0; } }
 
+/* ── History View ──────────────────────────────────────── */
+.history-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+
+.hist-summary-row {
+  display: flex; gap: 0;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.hist-stat { flex: 1; text-align: center; padding: 12px 0; }
+.hist-stat + .hist-stat { border-left: 1px solid var(--border); }
+.hist-stat-val { font-size: 18px; font-weight: 700; color: var(--primary-bright); }
+.hist-stat-key { font-size: 10px; color: var(--text-dim); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.4px; }
+
+.hist-chart-wrap {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 14px 10px;
+}
+.hist-chart-title { font-size: 11px; font-weight: 600; color: var(--text-dim); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 10px; }
+.hist-chart { width: 100%; height: 90px; display: block; }
+
+.hist-days { display: flex; flex-direction: column; gap: 6px; }
+.hist-day-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: var(--radius-sm);
+  background: var(--card); border: 1px solid rgba(14,165,233,0.08);
+  transition: border-color var(--transition);
+}
+.hist-day-row.goal-met { border-color: rgba(14,165,233,0.22); }
+.hist-day-row.today { border-color: var(--border-bright); background: rgba(14,165,233,0.06); }
+.hist-day-label { font-size: 12px; font-weight: 600; color: var(--text-muted); width: 36px; flex-shrink: 0; }
+.hist-day-bar-wrap { flex: 1; height: 6px; background: rgba(255,255,255,0.07); border-radius: 99px; overflow: hidden; }
+.hist-day-bar { height: 100%; border-radius: 99px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+.hist-day-bar.goal-met { background: linear-gradient(90deg, #38bdf8, #0ea5e9); }
+.hist-day-bar.partial  { background: rgba(14,165,233,0.35); }
+.hist-day-ml { font-size: 11px; font-weight: 600; color: var(--primary-bright); width: 44px; text-align: right; flex-shrink: 0; }
+.hist-day-badge { font-size: 13px; flex-shrink: 0; }
+
+/* ── Confetti ───────────────────────────────────────────── */
+.confetti-layer {
+  position: fixed; inset: 0; pointer-events: none; z-index: 999; overflow: hidden;
+}
+.confetti-piece {
+  position: absolute; top: -12px;
+  width: 7px; height: 10px; border-radius: 2px;
+  animation: confetti-fall linear forwards;
+}
+@keyframes confetti-fall {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateY(650px) rotate(720deg); opacity: 0; }
+}
+
+/* ── Goal celebration banner ───────────────────────────── */
+.celebrate-banner {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 16px; border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(52,211,153,0.15), rgba(14,165,233,0.10));
+  border: 1px solid rgba(52,211,153,0.35);
+  font-size: 13px; font-weight: 700; color: var(--success);
+  animation: badge-pop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+
 /* ── Utility ───────────────────────────────────────────── */
 .hidden { display: none !important; }

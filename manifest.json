@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "HydroMonk — Drink Water Reminder",
   "short_name": "HydroMonk",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Smart hydration reminders with streak tracking, water benefits & daily goals. Stay sharp, stay hydrated — by DevOps-Monk.",
   "icons": {
     "16": "icons/icon16.png",
@@ -27,6 +27,9 @@
   "permissions": [
     "notifications",
     "storage",
-    "alarms"
-  ]
+    "alarms",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": ["<all_urls>"]
 }
