@@ -56,21 +56,22 @@ function showToast(msg: string) {
 }
 
 // ── Water circle ─────────────────────────────────────────────────────────────
-function updateCircle(logged: number, goal: number) {
-  const pct = goal > 0 ? Math.min(100, Math.round((logged / goal) * 100)) : 0;
+// entryCount = actual number of log entries (matches the log list)
+// totalMl / goalMl drive the fill % so it stays ml-accurate
+function updateCircle(entryCount: number, goal: number, totalMl: number, goalMl: number) {
+  const pct = goalMl > 0 ? Math.min(100, Math.round((totalMl / goalMl) * 100)) : 0;
   const fill = document.getElementById('water-fill')!;
   fill.style.height = `${pct}%`;
 
-  document.getElementById('circle-count')!.textContent = String(logged);
+  document.getElementById('circle-count')!.textContent = String(entryCount);
   document.getElementById('circle-goal')!.textContent = String(goal);
   document.getElementById('circle-pct')!.textContent = `${pct}%`;
 
-  // Adjust text color for readability when fill is high
   const content = document.querySelector('.circle-content') as HTMLElement;
   content.style.color = pct > 50 ? '#fff' : 'var(--text)';
 
   const badge = document.getElementById('goal-badge')!;
-  badge.classList.toggle('hidden', logged < goal);
+  badge.classList.toggle('hidden', totalMl < goalMl);
 }
 
 // ── Log list ────────────────────────────────────────────────────────────────
@@ -119,10 +120,11 @@ async function refresh() {
   const stats = await getStats();
 
   const totalMl = log.entries.reduce((s, e) => s + e.ml, 0);
-  const goalMl = settings.dailyGoalGlasses * settings.glassSizeMl;
-  const logged = Math.floor(totalMl / settings.glassSizeMl);
+  const goalMl  = settings.dailyGoalGlasses * settings.glassSizeMl;
+  const entryCount = log.entries.length;        // matches the log list exactly
+  const logged     = Math.floor(totalMl / settings.glassSizeMl); // for badge/goal checks
 
-  updateCircle(logged, settings.dailyGoalGlasses);
+  updateCircle(entryCount, settings.dailyGoalGlasses, totalMl, goalMl);
   updateStats(totalMl, goalMl);
   renderLog(log.entries);
 
