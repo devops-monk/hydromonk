@@ -36,11 +36,14 @@ jobs:
       - name: Package zip
         run: cd dist && zip -r ../hydromonk-${{ steps.version.outputs.version }}.zip .
 
+      # Upload dist CONTENTS (not the pre-zipped file). GitHub wraps artifacts in
+      # a zip on download, so the downloaded archive has manifest.json at its
+      # root and uploads to the Chrome Web Store directly — no double-zip.
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: hydromonk-${{ steps.version.outputs.version }}
-          path: hydromonk-${{ steps.version.outputs.version }}.zip
+          path: dist/
           retention-days: 30
 
       - name: Create GitHub Release
