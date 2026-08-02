@@ -22,7 +22,13 @@
   --transition: 0.2s ease;
 }
 
-html { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+html {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  /* Clamp the document to the popup width so nothing (e.g. a position:fixed
+     overlay) can widen the popup window and leave empty space on the side. */
+  width: 360px;
+  overflow-x: hidden;
+}
 
 body {
   width: 360px;
