@@ -71,11 +71,23 @@ async function notify() {
     ? `${remaining} glass${remaining > 1 ? 'es' : ''} to go. ${fact}`
     : `Goal complete! ${fact}`;
 
-  chrome.notifications.create(ALARM, {
+  // macOS coalesces a notification recreated with the SAME id and does not
+  // re-alert. Clear any prior reminder and post a fresh, uniquely-id'd one so
+  // every reminder actually banners on macOS (Windows is unaffected).
+  const all = await chrome.notifications.getAll();
+  await Promise.all(
+    Object.keys(all)
+      .filter((k) => k.startsWith(ALARM))
+      .map((k) => chrome.notifications.clear(k)),
+  );
+
+  chrome.notifications.create(`${ALARM}-${Date.now()}`, {
     type: 'basic',
     iconUrl: chrome.runtime.getURL('icons/icon128.png'),
     title,
     message,
+    // Note: macOS does not render notification action buttons — Mac users
+    // interact via the popup; the buttons still work on Windows/Linux.
     buttons: [{ title: '✓ Drank a glass' }, { title: '⏰ Snooze 10 min' }],
     requireInteraction: false,
     silent: !settings.soundEnabled,
@@ -84,7 +96,7 @@ async function notify() {
 
 // ── Notification button clicks ────────────────────────────────────────────────
 chrome.notifications.onButtonClicked.addListener(async (id, idx) => {
-  if (id !== ALARM) return;
+  if (!id.startsWith(ALARM)) return; // ids are now `${ALARM}-<timestamp>`
   if (idx === 0) {
     const s = await getSettings();
     const log = await addEntry(s.glassSizeMl);
